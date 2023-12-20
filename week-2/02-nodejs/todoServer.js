@@ -41,9 +41,173 @@
  */
   const express = require('express');
   const bodyParser = require('body-parser');
-  
+  const fs = require('fs')  
   const app = express();
-  
+  let todos = [];
   app.use(bodyParser.json());
+
+  // app.get('/todos',(req,res)=>{
+  //   res.status(200).json(todos);
+  // });
+
+  function getIndex(id,arr){
+    for(let i=0;i<arr.length;i++){
+      if(id === arr[i].id){
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  // function deleteIndex(id,arr){
+  //   for(let i=0;i<arr.length;i++){
+  //     if(id === arr[i].id){
+  //       arr.splice(i,1);
+  //       return;
+  //     }
+  //   }
+  // }
+
+  app.get('/todos',(req,res)=>{
+    fs.readFile('todos.json','utf8',(err,data)=>{
+      if(err) throw err;
+      res.status(200).json(JSON.parse(data));
+    });
+  });
   
+  // app.get('/todos/:id',(req,res)=>{
+  //   const id = parseInt(req.params.id);
+  //   let todo;
+  //   for(let i=0;i<todos.length;i++){
+  //     if(todos[i].id === id){
+  //       todo = todos[i];
+  //       break;
+  //     }
+  //   }
+  //   if(!todo){
+  //     res.status(404).send();
+  //   }
+  //   else res.status(200).json(todo);
+  // });
+
+  app.get('/todos/:id',(req,res)=>{
+    const id = parseInt(req.params.id);
+    fs.readFile('todos.json','utf8',(err,data)=>{
+      if(err) throw err;
+      const todos = JSON.parse(data);
+      const index = getIndex(id,todos)
+      if(index === -1) {
+        res.status(404).send();
+        return
+      }
+      res.status(200).json(todos[index])
+    });
+  });
+
+  // app.post('/todos',(req,res)=>{
+  //   const todo = {'id' : Math.floor(Math.random()*100000),
+  //                 'title' : req.body.title,
+  //                 'description' : req.body.description
+  //   }
+  //   todos.push(todo);
+  //   res.status(201).json(todo);
+  // });
+
+  app.post('/todos',(req,res)=>{
+    const todo = {'id' : Math.floor(Math.random()*100000),
+                  'title' : req.body.title,
+                  'description' : req.body.description
+    }
+    fs.readFile('todos.json','utf8',(err,data)=>{
+      if(err) throw err;
+      const todos = JSON.parse(data);
+      todos.push(todo)
+      fs.writeFile('todos.json',JSON.stringify(todos),(err)=>{
+        if (err) throw err;
+        res.status(201).json(todo);
+      })
+    })
+  })
+
+  // app.put('/todos/:id',(req,res)=>{
+  //   const id = req.params.id;
+  //   let index = -1;
+  //   for(let i=0;i<todos.length;i++){
+  //     if(todos[i].id == id){
+  //       index = i;
+  //       break;
+  //     }
+  //   }
+  //   if(index==-1){
+  //     res.status(404).json();
+  //     return;
+  //   }
+  //   todos[index].title = req.body.title;
+  //   todos[index].description = req.body.description;
+  //   res.status(200).json(todos[index])
+  // });
+
+  app.put('/todos/:id',(req,res)=>{
+    const id = parseInt(req.params.id)
+    fs.readFile('todos.json','utf8',(err,data)=>{
+      if(err) throw err;
+      const todos = JSON.parse(data)
+      const index = getIndex(id,todos)
+      if(index === -1) {
+        res.status(404).send()
+        return
+      }
+      todos[index].title = req.body.title;
+      todos[index].description = req.body.description;
+      fs.writeFile('todos.json',JSON.stringify(todos),(err)=>{
+        if (err) throw err;
+        res.status(200).json(todos[index])
+      })
+    });
+  });
+
+  // app.delete('/todos/:id',(req,res)=>{
+  //   const id = req.params.id;
+  //   let index = -1;
+  //   for(let i=0;i<todos.length;i++){
+  //     if(todos[i].id == id){
+  //       index = i;
+  //       break;
+  //     }
+  //   }
+  //   if(index==-1){
+  //     res.status(404).send();
+  //     return;
+  //   }
+  //   todos.splice(index,1);
+  //   res.status(200).send();
+  // });
+
+
+  app.delete('/todos/:id',(req,res)=>{
+    fs.readFile('todos.json','utf8',(err,data)=>{
+      if (err) throw err;
+      let todos = JSON.parse(data)
+      const id = parseInt(req.params.id)
+      const index = getIndex(id,todos)
+      console.log(index);
+      if(index === -1) {
+        res.status(404).send();
+        // return;
+      }
+      else{
+        todos.splice(index,1)
+        fs.writeFile('todos.json',JSON.stringify(todos),(err)=>{
+        if(err) throw err;
+        res.status(200).send()
+      })
+      }
+    })
+  })
+
+
+  app.use((req,res,next)=>{
+    res.status(404).send();
+  });
+
   module.exports = app;
