@@ -1,24 +1,60 @@
 const { Router } = require("express");
 const router = Router();
-const userMiddleware = require("../middleware/user");
-
+const { userValidationMiddleware, userMiddleware } = require("../middleware/user");
+const { Admin, User, Course } = require('../db/index')
+const jwt = require("jsonwebtoken")
+const secretKey = 'secret'
 // User Routes
-app.post('/signup', (req, res) => {
+router.post('/signup', userValidationMiddleware,(req, res) => {
     // Implement user signup logic
+    User.create({
+        'username':req.body.username,
+        'password':req.body.password
+    }).then(op=>{
+        res.status(200).json({msg:"User created successfully"})
+    }).catch(err=>{
+        res.status(500).json({error:"some error occurred"})
+    })    
 });
 
-app.post('/signin', (req, res) => {
+router.post('/signin', userValidationMiddleware,(req, res) => {
     // Implement admin signup logic
+    const user = {
+        username:req.body.username,
+        password:req.body.password
+    }
+    const token = jwt.sign(user,secretKey)
+    res.status(200).json({msg:"logged in successfully",token}) 
 });
 
-app.get('/courses', (req, res) => {
+router.get('/courses', async (req, res) => {
     // Implement listing all courses logic
+    const courses = await Course.find()
+    res.status(200).json({courses})
 });
 
-app.post('/courses/:courseId', userMiddleware, (req, res) => {
+router.post('/courses/:courseId', userMiddleware,async (req, res) => {
     // Implement course purchase logic
+    const course = await Course.findOne({_id:req.params.courseId})
+    // console.log(course)
+    const username = req.user.username;
+    try{
+        await User.findOneAndUpdate({username:username},{$push:{courses:course}},{new:true})
+        res.status(200).json({msg:"Course purchased successfully"})
+    }
+    catch(err){
+        res.status(400).json({msg:err})
+    }
+    
 });
 
-app.get('/purchasedCourses', userMiddleware, (req, res) => {
+router.get('/purchasedCourses', userMiddleware, async (req, res) => {
     // Implement fetching purchased courses logic
+    const username = req.user.username
+    // console.log(username)
+    const user = await User.findOne({username:username})
+    // console.log(user.courses);
+    res.status(200).json({courses:user.courses})
 });
+
+module.exports = router;
